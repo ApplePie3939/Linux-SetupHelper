@@ -3,6 +3,8 @@ import type { ConfigFile, GuideStep, SetupGuide, SetupInput } from "./types";
 import { normalizeInput } from "./validation";
 
 const lines = (...values: string[]) => values.join("\n") + "\n";
+const SSHD_DROP_IN_NAME = "00-linux-setup-helper.conf";
+const SSHD_DROP_IN_PATH = `/etc/ssh/sshd_config.d/${SSHD_DROP_IN_NAME}`;
 
 function adminStep(input: SetupInput): GuideStep {
   const user = input.admin.username;
@@ -70,8 +72,8 @@ function sshFiles(input: SetupInput): ConfigFile[] {
   );
   return [
     {
-      name: "99-linux-setup-helper.conf",
-      path: "/etc/ssh/sshd_config.d/99-linux-setup-helper.conf",
+      name: SSHD_DROP_IN_NAME,
+      path: SSHD_DROP_IN_PATH,
       owner: "root:root",
       mode: "0644",
       content: sshd,
@@ -102,18 +104,23 @@ function sshConfigureStep(input: SetupInput): GuideStep {
     ],
     commands: [
       `sudo install -d -m 0700 -o ${user} -g ${user} /home/${user}/.ssh`,
-      `sudo install -m 0600 -o ${user} -g ${user} /dev/null /home/${user}/.ssh/authorized_keys`,
-      "sudo install -m 0644 -o root -g root /dev/null /etc/ssh/sshd_config.d/99-linux-setup-helper.conf",
-      "上記2ファイルの「設定全文」を、それぞれの配置先へエディターで貼り付けます。",
+      `sudo touch /home/${user}/.ssh/authorized_keys`,
+      `sudo chown ${user}:${user} /home/${user}/.ssh/authorized_keys`,
+      `sudo chmod 0600 /home/${user}/.ssh/authorized_keys`,
+      `sudo touch ${SSHD_DROP_IN_PATH}`,
+      `sudo chown root:root ${SSHD_DROP_IN_PATH}`,
+      `sudo chmod 0644 ${SSHD_DROP_IN_PATH}`,
+      "authorized_keysに既存の鍵がある場合は削除せず、上記の公開鍵を新しい1行として追加します。sshdの設定全文は指定のdrop-inへ貼り付けます。",
     ],
     files: sshFiles(input),
     verify: [
       `sudo stat -c '%U:%G %a %n' /home/${user}/.ssh /home/${user}/.ssh/authorized_keys`,
       "sudo sshd -t",
+      "sudo sshd -T | grep -E '^(port|pubkeyauthentication|passwordauthentication|permitrootlogin) '",
     ],
-    expected: `.sshは${user}:${user} 700、authorized_keysは${user}:${user} 600と表示され、sshd -tは何も表示せず終了します。`,
+    expected: `.sshは${user}:${user} 700、authorized_keysは${user}:${user} 600と表示され、sshd -tは何も表示せず終了します。実効設定はport ${input.ssh.port}、pubkeyauthentication yes、passwordauthentication ${input.ssh.disablePasswordAuthentication ? "no" : "yes"}、permitrootlogin ${input.ssh.disableRootLogin ? "no" : "prohibit-password"}です。`,
     rollback: [
-      "sshd -tが失敗したら再読み込みせず、sudo rm /etc/ssh/sshd_config.d/99-linux-setup-helper.conf を実行します。",
+      `sshd -tまたは実効設定の確認が失敗したら再読み込みせず、sudo rm ${SSHD_DROP_IN_PATH} を実行します。`,
       "必要なら sudo cp -a /root/linux-setup-helper-backup/sshd_config.d/. /etc/ssh/sshd_config.d/ で戻し、再度 sudo sshd -t を実行します。",
     ],
     evidence: ["openssh", "permissions"],
@@ -142,7 +149,7 @@ function sshApplyStep(input: SetupInput): GuideStep {
     expected:
       "別セッションで公開鍵ログインでき、sudo -vが成功します。現在のセッションも接続されたままです。",
     rollback: [
-      "現在の接続から sudo rm /etc/ssh/sshd_config.d/99-linux-setup-helper.conf を実行します。",
+      `現在の接続から sudo rm ${SSHD_DROP_IN_PATH} を実行します。`,
       "sudo sshd -t が成功することを確認してから sudo systemctl reload ssh を実行します。",
     ],
     evidence: ["openssh"],
@@ -200,7 +207,7 @@ function updatesStep(input: SetupInput): GuideStep {
       ? "セキュリティ更新を毎日自動適用し、既知の脆弱性にさらされる時間を短くします。"
       : "自動適用を止め、更新を手動管理します。",
     impact: enabled
-      ? "更新中は一時的にaptが使用中になり、更新によって再起動が推奨される場合があります。自動再起動は有効化しません。"
+      ? "更新中は一時的にaptが使用中になります。Ubuntu 24.04ではneedrestartが影響を受けたサービスを自動再起動する場合があります。OSの自動再起動は有効化しません。"
       : "管理者が定期的に更新しないと脆弱性が残ります。",
     danger: enabled
       ? undefined

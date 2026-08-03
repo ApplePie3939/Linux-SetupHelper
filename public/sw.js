@@ -1,4 +1,4 @@
-const CACHE = "linux-setup-helper-v2";
+const CACHE = "linux-setup-helper-v3";
 const APP_SHELL = ["/", "/index.html", "/manifest.webmanifest", "/icon.svg"];
 
 self.addEventListener("install", (event) => {
@@ -36,6 +36,21 @@ self.addEventListener("fetch", (event) => {
     return;
   event.respondWith(
     (async () => {
+      if (event.request.mode === "navigate") {
+        try {
+          const response = await fetch(event.request, { cache: "no-cache" });
+          if (response.ok) {
+            const cache = await caches.open(CACHE);
+            await cache.put("/index.html", response.clone());
+          }
+          return response;
+        } catch {
+          const fallback = await caches.match("/index.html", {
+            ignoreVary: true,
+          });
+          return fallback ?? Response.error();
+        }
+      }
       const cached = await caches.match(event.request, { ignoreVary: true });
       if (cached) return cached;
       try {
@@ -44,7 +59,7 @@ self.addEventListener("fetch", (event) => {
         await cache.put(event.request, response.clone());
         return response;
       } catch {
-        return caches.match("/index.html", { ignoreVary: true });
+        return Response.error();
       }
     })(),
   );

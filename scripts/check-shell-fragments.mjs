@@ -17,9 +17,14 @@ sudo adduser serveradmin
 sudo adduser serveradmin sudo
 sudo ufw allow 2222/tcp comment 'OpenSSH'
 sudo install -d -m 0700 -o serveradmin -g serveradmin /home/serveradmin/.ssh
-sudo install -m 0600 -o serveradmin -g serveradmin /dev/null /home/serveradmin/.ssh/authorized_keys
-sudo install -m 0644 -o root -g root /dev/null /etc/ssh/sshd_config.d/99-linux-setup-helper.conf
+sudo touch /home/serveradmin/.ssh/authorized_keys
+sudo chown serveradmin:serveradmin /home/serveradmin/.ssh/authorized_keys
+sudo chmod 0600 /home/serveradmin/.ssh/authorized_keys
+sudo touch /etc/ssh/sshd_config.d/00-linux-setup-helper.conf
+sudo chown root:root /etc/ssh/sshd_config.d/00-linux-setup-helper.conf
+sudo chmod 0644 /etc/ssh/sshd_config.d/00-linux-setup-helper.conf
 sudo sshd -t
+sudo sshd -T | grep -E '^(port|pubkeyauthentication|passwordauthentication|permitrootlogin) '
 sudo systemctl reload ssh
 sudo ufw default deny incoming
 sudo ufw default allow outgoing

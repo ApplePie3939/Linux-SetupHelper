@@ -1,0 +1,322 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`generateGuide > 代表入力のMarkdownをスナップショットで固定する 1`] = `
+"# Ubuntu Server 24.04 LTS 初期設定手順
+
+対象: **Ubuntu Server 24.04 LTS**
+
+> ⚠️ この手順はコマンドを自動実行しません。各項目を読み、期待結果を確認してから次へ進んでください。
+
+> ⚠️ SSH設定中は現在の接続を維持し、別セッションで公開鍵ログインとsudoを確認するまで閉じないでください。
+
+> ⚠️ パスワード、秘密鍵、APIキーをこのアプリへ入力しないでください。
+
+## 1. 管理ユーザーを作成する
+
+**目的:** 日常の管理をrootで行わず、必要な操作だけsudoで実行できるようにします。
+
+**影響:** ローカルユーザー「serveradmin」を作成し、sudoグループへ追加します。パスワードはサーバー上のadduserが対話的に尋ねます。
+
+### 変更前の確認・バックアップ
+
+- 既存ユーザーとsudoグループを確認します: getent group sudo
+
+### 実行・配置
+
+\`\`\`bash
+sudo adduser serveradmin
+\`\`\`
+
+\`\`\`bash
+sudo adduser serveradmin sudo
+\`\`\`
+
+### 成功確認
+
+\`\`\`bash
+id serveradmin
+\`\`\`
+
+\`\`\`bash
+sudo -l -U serveradmin
+\`\`\`
+
+**期待結果:** idのgroupsにsudoが含まれ、sudo -lが「serveradmin」の許可を表示します。
+
+### 失敗時の復旧
+
+- 公開鍵設定や別セッション確認より前なら、sudo deluser serveradmin sudo で権限だけを外せます。ユーザー削除はデータ確認後に手動で判断してください。
+
+### 根拠
+
+- [Ubuntu Server documentation — User management](https://ubuntu.com/server/docs/how-to/security/user-management/) — 対象: Ubuntu Server 24.04 LTS、最終確認: 2026-08-03
+
+## 2. SSH用のUFW許可を先に追加する
+
+**目的:** SSHポート変更やUFW有効化による接続遮断を防ぎます。
+
+**影響:** TCPポート2222への着信を許可します。
+
+> ⚠️ この許可を確認する前にsshdのポート変更やUFW有効化を行わないでください。
+
+### 変更前の確認・バックアップ
+
+- 現在のルールを画面または作業記録へ保存します: sudo ufw status numbered
+
+### 実行・配置
+
+\`\`\`bash
+sudo ufw allow 2222/tcp comment 'OpenSSH'
+\`\`\`
+
+### 成功確認
+
+\`\`\`bash
+sudo ufw status numbered
+\`\`\`
+
+**期待結果:** 2222/tcp のALLOWルールが表示されます。
+
+### 失敗時の復旧
+
+- 別セッション確認後、不要なら sudo ufw delete allow 2222/tcp を実行します。確認前には削除しないでください。
+
+### 根拠
+
+- [Ubuntu Server documentation — Firewall](https://ubuntu.com/server/docs/how-to/security/firewalls/) — 対象: Ubuntu Server 24.04 LTS / ufw、最終確認: 2026-08-03
+
+## 3. 公開鍵とsshd設定を配置する
+
+**目的:** 管理ユーザーの公開鍵認証を準備し、sshdの変更を独立したdrop-inへ限定します。
+
+**影響:** SSHはポート2222を使用し、パスワード認証は無効、rootログインは無効になります。
+
+> ⚠️ 現在のSSH接続は閉じないでください。設定ミスがあると新しい接続ができなくなります。
+
+### 変更前の確認・バックアップ
+
+- sudo install -d -m 0700 /root/linux-setup-helper-backup
+- sudo cp -a /etc/ssh/sshd_config.d /root/linux-setup-helper-backup/sshd_config.d
+
+### 実行・配置
+
+\`\`\`bash
+sudo install -d -m 0700 -o serveradmin -g serveradmin /home/serveradmin/.ssh
+\`\`\`
+
+\`\`\`bash
+sudo touch /home/serveradmin/.ssh/authorized_keys
+\`\`\`
+
+\`\`\`bash
+sudo chown serveradmin:serveradmin /home/serveradmin/.ssh/authorized_keys
+\`\`\`
+
+\`\`\`bash
+sudo chmod 0600 /home/serveradmin/.ssh/authorized_keys
+\`\`\`
+
+\`\`\`bash
+sudo touch /etc/ssh/sshd_config.d/00-linux-setup-helper.conf
+\`\`\`
+
+\`\`\`bash
+sudo chown root:root /etc/ssh/sshd_config.d/00-linux-setup-helper.conf
+\`\`\`
+
+\`\`\`bash
+sudo chmod 0644 /etc/ssh/sshd_config.d/00-linux-setup-helper.conf
+\`\`\`
+
+\`\`\`bash
+authorized_keysに既存の鍵がある場合は削除せず、上記の公開鍵を新しい1行として追加します。sshdの設定全文は指定のdrop-inへ貼り付けます。
+\`\`\`
+
+#### 設定全文: /etc/ssh/sshd_config.d/00-linux-setup-helper.conf
+
+- 所有者: \`root:root\`
+- 権限: \`0644\`
+
+\`\`\`
+# Linux Setup Helper — Ubuntu Server 24.04 LTS
+Port 2222
+PubkeyAuthentication yes
+PasswordAuthentication no
+PermitRootLogin no
+\`\`\`
+
+#### 設定全文: /home/serveradmin/.ssh/authorized_keys
+
+- 所有者: \`serveradmin:serveradmin\`
+- 権限: \`0600\`
+
+\`\`\`
+ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIAEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEB test
+\`\`\`
+
+### 成功確認
+
+\`\`\`bash
+sudo stat -c '%U:%G %a %n' /home/serveradmin/.ssh /home/serveradmin/.ssh/authorized_keys
+\`\`\`
+
+\`\`\`bash
+sudo sshd -t
+\`\`\`
+
+\`\`\`bash
+sudo sshd -T | grep -E '^(port|pubkeyauthentication|passwordauthentication|permitrootlogin) '
+\`\`\`
+
+**期待結果:** .sshはserveradmin:serveradmin 700、authorized_keysはserveradmin:serveradmin 600と表示され、sshd -tは何も表示せず終了します。実効設定はport 2222、pubkeyauthentication yes、passwordauthentication no、permitrootlogin noです。
+
+### 失敗時の復旧
+
+- sshd -tまたは実効設定の確認が失敗したら再読み込みせず、sudo rm /etc/ssh/sshd_config.d/00-linux-setup-helper.conf を実行します。
+- 必要なら sudo cp -a /root/linux-setup-helper-backup/sshd_config.d/. /etc/ssh/sshd_config.d/ で戻し、再度 sudo sshd -t を実行します。
+
+### 根拠
+
+- [Ubuntu Server documentation — OpenSSH server](https://ubuntu.com/server/docs/how-to/security/openssh-server/) — 対象: Ubuntu Server 24.04 LTS / OpenSSH、最終確認: 2026-08-03
+- [Ubuntu Manpage — install(1)](https://manpages.ubuntu.com/manpages/noble/man1/install.1.html) — 対象: Ubuntu 24.04 LTS (Noble)、最終確認: 2026-08-03
+
+## 4. 検証後にsshdを再読み込みし、別セッションで確認する
+
+**目的:** 構文検証に成功した設定だけを反映し、既存接続を復旧経路として残します。
+
+**影響:** 新しいSSH接続に変更後の認証とポートが適用されます。現在の接続は維持します。
+
+> ⚠️ 別セッションでsudoまで確認できるまで、現在のSSH接続を絶対に閉じないでください。
+
+### 変更前の確認・バックアップ
+
+- 直前の手順で作成した/root/linux-setup-helper-backupを保持します。
+
+### 実行・配置
+
+\`\`\`bash
+sudo sshd -t
+\`\`\`
+
+\`\`\`bash
+sudo systemctl reload ssh
+\`\`\`
+
+### 成功確認
+
+\`\`\`bash
+別のローカル端末から ssh -p 2222 serveradmin@サーバーのIPアドレス
+\`\`\`
+
+\`\`\`bash
+新しいSSHセッション内で sudo -v
+\`\`\`
+
+**期待結果:** 別セッションで公開鍵ログインでき、sudo -vが成功します。現在のセッションも接続されたままです。
+
+### 失敗時の復旧
+
+- 現在の接続から sudo rm /etc/ssh/sshd_config.d/00-linux-setup-helper.conf を実行します。
+- sudo sshd -t が成功することを確認してから sudo systemctl reload ssh を実行します。
+
+### 根拠
+
+- [Ubuntu Server documentation — OpenSSH server](https://ubuntu.com/server/docs/how-to/security/openssh-server/) — 対象: Ubuntu Server 24.04 LTS / OpenSSH、最終確認: 2026-08-03
+
+## 5. UFWを有効化する
+
+**目的:** 明示的に許可したSSHポート以外の不要な着信を既定で拒否します。
+
+**影響:** 既存のネットワークサービスは、別途許可しない限り外部から接続できなくなる可能性があります。
+
+> ⚠️ 対象外のサービスがある場合は、その管理者が必要な許可を確認するまで有効化しないでください。
+
+### 変更前の確認・バックアップ
+
+- sudo ufw status numbered と sudo ufw show raw の結果を作業記録へ保存します。
+
+### 実行・配置
+
+\`\`\`bash
+sudo ufw default deny incoming
+\`\`\`
+
+\`\`\`bash
+sudo ufw default allow outgoing
+\`\`\`
+
+\`\`\`bash
+sudo ufw enable
+\`\`\`
+
+### 成功確認
+
+\`\`\`bash
+sudo ufw status verbose
+\`\`\`
+
+**期待結果:** Status: active、既定のincoming deny、2222/tcp ALLOWが表示されます。
+
+### 失敗時の復旧
+
+- 現在のSSH接続を維持したまま sudo ufw disable を実行します。
+
+### 根拠
+
+- [Ubuntu Server documentation — Firewall](https://ubuntu.com/server/docs/how-to/security/firewalls/) — 対象: Ubuntu Server 24.04 LTS / ufw、最終確認: 2026-08-03
+
+## 6. 自動セキュリティ更新を有効化する
+
+**目的:** セキュリティ更新を毎日自動適用し、既知の脆弱性にさらされる時間を短くします。
+
+**影響:** 更新中は一時的にaptが使用中になります。Ubuntu 24.04ではneedrestartが影響を受けたサービスを自動再起動する場合があります。OSの自動再起動は有効化しません。
+
+### 変更前の確認・バックアップ
+
+- sudo cp -a /etc/apt/apt.conf.d/20auto-upgrades /root/linux-setup-helper-backup/20auto-upgrades 2>/dev/null || true
+
+### 実行・配置
+
+\`\`\`bash
+sudo apt update
+\`\`\`
+
+\`\`\`bash
+sudo apt install unattended-upgrades
+\`\`\`
+
+\`\`\`bash
+上記の「設定全文」を/etc/apt/apt.conf.d/20auto-upgradesへエディターで貼り付けます。
+\`\`\`
+
+#### 設定全文: /etc/apt/apt.conf.d/20auto-upgrades
+
+- 所有者: \`root:root\`
+- 権限: \`0644\`
+
+\`\`\`
+APT::Periodic::Update-Package-Lists "1";
+APT::Periodic::Unattended-Upgrade "1";
+\`\`\`
+
+### 成功確認
+
+\`\`\`bash
+apt-config dump | grep -E "APT::Periodic::(Update-Package-Lists|Unattended-Upgrade)"
+\`\`\`
+
+\`\`\`bash
+sudo unattended-upgrade --dry-run --debug
+\`\`\`
+
+**期待結果:** 2項目が"1"と表示されます。dry-runは実際の更新を適用せず、候補を確認します。
+
+### 失敗時の復旧
+
+- バックアップがある場合は sudo cp -a /root/linux-setup-helper-backup/20auto-upgrades /etc/apt/apt.conf.d/20auto-upgrades で戻します。
+
+### 根拠
+
+- [Ubuntu Server documentation — Automatic updates](https://ubuntu.com/server/docs/how-to/software/automatic-updates/) — 対象: Ubuntu Server 24.04 LTS / unattended-upgrades、最終確認: 2026-08-03
+"
+`;

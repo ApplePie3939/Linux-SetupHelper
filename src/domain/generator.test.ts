@@ -45,6 +45,10 @@ describe("generateGuide", () => {
     );
   });
 
+  it("代表入力のMarkdownをスナップショットで固定する", () => {
+    expect(renderMarkdown(generateGuide(input))).toMatchSnapshot();
+  });
+
   it("設定全文・所有者・権限・末尾改行を含む", () => {
     const files = generateGuide(input).steps.flatMap((step) => step.files);
     expect(files).toHaveLength(3);
@@ -54,6 +58,21 @@ describe("generateGuide", () => {
         (file) => file.owner && file.mode && file.path.startsWith("/"),
       ),
     ).toBe(true);
+  });
+
+  it("sshdの最優先drop-inと非破壊的な鍵配置手順を生成する", () => {
+    const guide = generateGuide(input);
+    const files = guide.steps.flatMap((step) => step.files);
+    const commands = guide.steps.flatMap((step) => step.commands).join("\n");
+    const verification = guide.steps.flatMap((step) => step.verify).join("\n");
+    expect(
+      files.some((file) => file.name === "00-linux-setup-helper.conf"),
+    ).toBe(true);
+    expect(commands).not.toContain("/dev/null");
+    expect(commands).toContain(
+      "sudo touch /home/serveradmin/.ssh/authorized_keys",
+    );
+    expect(verification).toContain("sudo sshd -T");
   });
 
   it("無効化を選んだ機能へ不要な変更を加えない", () => {

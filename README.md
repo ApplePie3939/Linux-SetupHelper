@@ -29,6 +29,8 @@ production buildはService Workerを登録し、初回取得後のアプリ資�
 - Node.js 24 LTS
 - npm
 - E2E用のPlaywright Chromium（`npx playwright install chromium`）
+- E2E用のPlaywright Firefox / WebKit（`npx playwright install firefox webkit`）
+- E2E対象のChrome / Edge現行版
 - ShellCheck（`npm run test:shellcheck`を実行する環境）
 
 ## 開発
@@ -52,6 +54,8 @@ npm run build
 ```
 
 検証状況と手動確認事項は [docs/verification.md](docs/verification.md)、コマンド・設定の一次資料は [docs/evidence.md](docs/evidence.md) に記録します。
+
+実Safari、各ブラウザの1世代前、スクリーンリーダー、Ubuntu 24.04 VMは手動検証対象です。未検証項目がある場合はリリース判定を保留します。
 
 ## 静的配信
 

@@ -33,10 +33,14 @@ async function waitForServer() {
 let exitCode = 1;
 try {
   await waitForServer();
-  const tests = spawn(process.execPath, [playwrightCli, "test"], {
-    cwd: root,
-    stdio: "inherit",
-  });
+  const tests = spawn(
+    process.execPath,
+    [playwrightCli, "test", ...process.argv.slice(2)],
+    {
+      cwd: root,
+      stdio: "inherit",
+    },
+  );
   const [code] = await once(tests, "exit");
   exitCode = typeof code === "number" ? code : 1;
 } finally {
