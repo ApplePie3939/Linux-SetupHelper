@@ -25,7 +25,8 @@ sudo chown root:root /etc/ssh/sshd_config.d/00-linux-setup-helper.conf
 sudo chmod 0644 /etc/ssh/sshd_config.d/00-linux-setup-helper.conf
 sudo sshd -t
 sudo sshd -T | grep -E '^(port|pubkeyauthentication|passwordauthentication|permitrootlogin) '
-sudo systemctl reload ssh
+sudo systemctl disable --now ssh.socket
+sudo systemctl restart ssh
 sudo ufw default deny incoming
 sudo ufw default allow outgoing
 sudo ufw enable

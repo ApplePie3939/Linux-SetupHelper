@@ -180,17 +180,18 @@ sudo sshd -T | grep -E '^(port|pubkeyauthentication|passwordauthentication|permi
 - [Ubuntu Server documentation — OpenSSH server](https://ubuntu.com/server/docs/how-to/security/openssh-server/) — 対象: Ubuntu Server 24.04 LTS / OpenSSH、最終確認: 2026-08-03
 - [Ubuntu Manpage — install(1)](https://manpages.ubuntu.com/manpages/noble/man1/install.1.html) — 対象: Ubuntu 24.04 LTS (Noble)、最終確認: 2026-08-03
 
-## 4. 検証後にsshdを再読み込みし、別セッションで確認する
+## 4. 検証後にsshdを安全に再起動し、別セッションで確認する
 
 **目的:** 構文検証に成功した設定だけを反映し、既存接続を復旧経路として残します。
 
-**影響:** 新しいSSH接続に変更後の認証とポートが適用されます。現在の接続は維持します。
+**影響:** 新しいSSH接続に変更後の認証とポートが適用されます。現在の接続は維持します。Ubuntu 24.04でssh.socketが有効な場合は、先に停止・無効化してsshd本体が指定ポートで待ち受けるようにします。
 
 > ⚠️ 別セッションでsudoまで確認できるまで、現在のSSH接続を絶対に閉じないでください。
 
 ### 変更前の確認・バックアップ
 
 - 直前の手順で作成した/root/linux-setup-helper-backupを保持します。
+- ssh.socketの現在の状態を確認します: systemctl is-active ssh.socket
 
 ### 実行・配置
 
@@ -199,7 +200,15 @@ sudo sshd -t
 \`\`\`
 
 \`\`\`bash
-sudo systemctl reload ssh
+systemctl is-active ssh.socket
+\`\`\`
+
+\`\`\`bash
+sudo systemctl disable --now ssh.socket
+\`\`\`
+
+\`\`\`bash
+sudo systemctl restart ssh
 \`\`\`
 
 ### 成功確認
@@ -212,12 +221,16 @@ sudo systemctl reload ssh
 新しいSSHセッション内で sudo -v
 \`\`\`
 
-**期待結果:** 別セッションで公開鍵ログインでき、sudo -vが成功します。現在のセッションも接続されたままです。
+\`\`\`bash
+sudo ss -ltnp | grep sshd
+\`\`\`
+
+**期待結果:** 別セッションで公開鍵ログインでき、sudo -vが成功します。sshdは2222番ポートで待ち受けます。現在のセッションも接続されたままです。
 
 ### 失敗時の復旧
 
 - 現在の接続から sudo rm /etc/ssh/sshd_config.d/00-linux-setup-helper.conf を実行します。
-- sudo sshd -t が成功することを確認してから sudo systemctl reload ssh を実行します。
+- sudo sshd -t が成功することを確認してから sudo systemctl enable --now ssh.socket を実行し、sudo systemctl restart ssh を実行します。
 
 ### 根拠
 

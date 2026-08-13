@@ -32,7 +32,10 @@ describe("generateGuide", () => {
       markdown.indexOf("sudo sshd -t"),
     );
     expect(markdown.indexOf("sudo sshd -t")).toBeLessThan(
-      markdown.indexOf("sudo systemctl reload ssh"),
+      markdown.indexOf("sudo systemctl restart ssh"),
+    );
+    expect(markdown.indexOf("sudo sshd -t")).toBeLessThan(
+      markdown.indexOf("sudo systemctl disable --now ssh.socket"),
     );
     expect(markdown).toContain("現在のSSH接続を維持");
     expect(markdown).toContain("別セッション");
@@ -73,6 +76,8 @@ describe("generateGuide", () => {
       "sudo touch /home/serveradmin/.ssh/authorized_keys",
     );
     expect(verification).toContain("sudo sshd -T");
+    expect(commands).toContain("sudo systemctl disable --now ssh.socket");
+    expect(commands).toContain("sudo systemctl restart ssh");
   });
 
   it("無効化を選んだ機能へ不要な変更を加えない", () => {

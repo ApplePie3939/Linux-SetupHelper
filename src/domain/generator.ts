@@ -128,29 +128,43 @@ function sshConfigureStep(input: SetupInput): GuideStep {
 }
 
 function sshApplyStep(input: SetupInput): GuideStep {
+  const changesPort = input.ssh.port !== 22;
   return {
     id: "ssh-apply",
-    title: "検証後にsshdを再読み込みし、別セッションで確認する",
+    title: "検証後にsshdを安全に再起動し、別セッションで確認する",
     purpose:
       "構文検証に成功した設定だけを反映し、既存接続を復旧経路として残します。",
-    impact:
-      "新しいSSH接続に変更後の認証とポートが適用されます。現在の接続は維持します。",
+    impact: changesPort
+      ? "新しいSSH接続に変更後の認証とポートが適用されます。現在の接続は維持します。Ubuntu 24.04でssh.socketが有効な場合は、先に停止・無効化してsshd本体が指定ポートで待ち受けるようにします。"
+      : "新しいSSH接続に変更後の認証とポートが適用されます。現在の接続は維持します。",
     danger:
       "別セッションでsudoまで確認できるまで、現在のSSH接続を絶対に閉じないでください。",
     backup: [
       "直前の手順で作成した/root/linux-setup-helper-backupを保持します。",
+      ...(changesPort
+        ? ["ssh.socketの現在の状態を確認します: systemctl is-active ssh.socket"]
+        : []),
     ],
-    commands: ["sudo sshd -t", "sudo systemctl reload ssh"],
+    commands: changesPort
+      ? [
+          "sudo sshd -t",
+          "systemctl is-active ssh.socket",
+          "sudo systemctl disable --now ssh.socket",
+          "sudo systemctl restart ssh",
+        ]
+      : ["sudo sshd -t", "sudo systemctl reload ssh"],
     files: [],
     verify: [
       `別のローカル端末から ssh -p ${input.ssh.port} ${input.admin.username}@サーバーのIPアドレス`,
       "新しいSSHセッション内で sudo -v",
+      "sudo ss -ltnp | grep sshd",
     ],
-    expected:
-      "別セッションで公開鍵ログインでき、sudo -vが成功します。現在のセッションも接続されたままです。",
+    expected: `別セッションで公開鍵ログインでき、sudo -vが成功します。sshdは${input.ssh.port}番ポートで待ち受けます。現在のセッションも接続されたままです。`,
     rollback: [
       `現在の接続から sudo rm ${SSHD_DROP_IN_PATH} を実行します。`,
-      "sudo sshd -t が成功することを確認してから sudo systemctl reload ssh を実行します。",
+      changesPort
+        ? "sudo sshd -t が成功することを確認してから sudo systemctl enable --now ssh.socket を実行し、sudo systemctl restart ssh を実行します。"
+        : "sudo sshd -t が成功することを確認してから sudo systemctl reload ssh を実行します。",
     ],
     evidence: ["openssh"],
   };

@@ -2,7 +2,7 @@
 
 ## リリース判定
 
-**保留**（2026-08-03）。実装と自動品質ゲートに重大な既知不具合はないが、Ubuntu Server 24.04 VM、実Safari、1世代前の対象ブラウザ、実スクリーンリーダーの検証が未完了である。安全性重要のUbuntu実環境検証が終わるまでMVPをリリース可としない。
+**保留**（2026-08-14）。Ubuntu Server 24.04 VMでの安全性重要検証は完了し、検証中に見つかった`ssh.socket`との相互作用を修正した。実Safariと各対象ブラウザの1世代前、実スクリーンリーダーの検証が未完了のため、MVPはまだリリース可としない。
 
 ## 自動検証
 
@@ -45,13 +45,34 @@ E2Eは生成停止、SSH安全順序、`sshd -T`による実効設定確認、�
 
 ## Ubuntu Server 24.04隔離環境
 
-未実行。このPCではWSLディストリビューション列挙が権限エラーになり、Multipass・VirtualBoxはなく、Dockerデーモンも停止していた。Dockerコンテナだけではsystemd、実sshd、UFWの到達性と別セッションを十分に検証できないため代替にしなかった。
+Hyper-Vの`Default Switch`に接続した、チェックポイントとコンソール接続を持つ使い捨てVMで実行した。ホストや実サーバーには変更を加えていない。
 
-スナップショットとコンソール接続を持つ破棄可能なUbuntu Server 24.04 VMで、次を実行する。
+| 項目                | 実測値・結果                                                                     |
+| ------------------- | -------------------------------------------------------------------------------- |
+| OS                  | Ubuntu Server 24.04.4 LTS、kernel `6.8.0-137-generic`                            |
+| OpenSSH             | `1:9.6p1-3ubuntu13.18`                                                           |
+| UFW                 | `0.36.2-6`                                                                       |
+| unattended-upgrades | `2.9.1+nmu4ubuntu1`                                                              |
+| 復旧経路            | Hyper-Vコンソール、初期状態・ポート22検証済み状態のチェックポイント、既存SSH接続 |
 
-1. `22/tcp`の推奨シナリオを手順どおり実行し、所有者・権限、`sshd -t`、`sshd -T`、reload、別セッション、sudo、UFW、unattended-upgrades dry-runを確認する。
-2. スナップショットへ戻し、`2222/tcp`で新ポート許可がsshd変更より前に有効になること、旧セッションを維持したまま別セッションへ接続できることを確認する。
-3. 各シナリオでdrop-in、UFW、`20auto-upgrades`のロールバックを実行し、変更前の状態へ戻ることを確認する。
-4. Ubuntu、OpenSSH、UFW、unattended-upgradesの正確なバージョン、実行結果、期待との差をこの文書へ追記する。
+### 推奨シナリオ（22/tcp）
 
-未検証のため、実パッケージ上の構文差、既存drop-inとの相互作用、UFW到達性、サービス再起動、復旧手順には残存リスクがある。
+1. `serveradmin`を作成してsudoグループへの所属と`sudo -l -U`を確認した。
+2. `ufw allow 22/tcp`を先に登録し、公開鍵、`00-linux-setup-helper.conf`、`20auto-upgrades`を配置した。
+3. `.ssh`は`serveradmin:serveradmin 700`、`authorized_keys`は`serveradmin:serveradmin 600`、両設定ファイルは`root:root 644`だった。
+4. `sshd -t`は成功し、`sshd -T`は`port 22`、`pubkeyauthentication yes`、`passwordauthentication no`、`permitrootlogin no`を示した。
+5. 別のホストPowerShellから公開鍵で接続し、`sudo -v`に成功した。UFW有効化後も接続を維持し、incoming deny、outgoing allow、`22/tcp ALLOW`を確認した。
+6. `APT::Periodic::Update-Package-Lists`と`APT::Periodic::Unattended-Upgrade`はともに`"1"`で、`unattended-upgrade --dry-run --debug`は終了コード0、実更新なしで完了した。
+
+### ポート変更・ロールバック（2222/tcp）
+
+1. `ufw allow 2222/tcp`を登録してからdrop-inの`Port`を`2222`へ変更し、`sshd -t`と`sshd -T`で実効値を確認した。
+2. 最初の`systemctl reload ssh`では`2222`に待ち受けず、`ssh -p 2222`は接続拒否となった。Ubuntu 24.04では`ssh.socket`がactiveで、`ListenStream=0.0.0.0:22`および`[::]:22`を保持していたためである。
+3. 既存SSH接続とHyper-Vコンソールを維持したまま`systemctl disable --now ssh.socket`、`systemctl restart ssh`を実行すると、`sshd`は`0.0.0.0:2222`と`[::]:2222`で待ち受けた。ホストからの公開鍵接続と`sudo -v`も成功した。
+4. ポート22のdrop-inへ戻し、`ssh.socket`を再有効化してから`ssh`を起動すると、22番での待ち受けと公開鍵接続が復帰した。`ufw delete allow 2222/tcp`後は、22番だけが許可された。
+
+この実機結果を反映して、ポート変更時の生成手順を`sshd -t` → `ssh.socket`の停止・無効化 → `ssh`再起動 → 待受確認へ修正した。通常の22番シナリオは従来どおり再読み込みのみとする。
+
+### 修正後の静的解析
+
+VM上でShellCheck `0.9.0`を導入し、ポート2222の代表生成断片（`ssh.socket`の停止・無効化と`ssh`再起動を含む）を`--shell=sh`で解析した。警告・エラーはなく、終了コードは0だった。
