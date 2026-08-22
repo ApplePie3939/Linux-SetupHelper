@@ -369,21 +369,21 @@ Ubuntu Server 24.04 LTS の初期設定手順を、安全かつ決定的に生�
 - **完了条件:** READMEの説明と実際の挙動・npm scriptsが一致する。
 - **検証:** 新規利用者の手順としてクリーン環境で読み合わせる。
 
-### [ ] T-071 最終品質ゲートを実行する
+### [x] T-071 最終品質ゲートを実行する
 
 - **依存:** T-070
 - **作業:** クリーンな依存導入後に、format、lint、型チェック、単体、UI、E2E、ShellCheck、ビルドを順に実行する。代表スナップショットの差分を意図と照合する。
 - **完了条件:** 全検証が成功し、警告・省略・スナップショット更新が説明可能である。
 - **検証:** `npm ci`、`npm run format:check`、`npm run lint`、`npm run typecheck`、`npm run test`、`npm run test:ui`、`npm run test:e2e`、`npm run test:shellcheck`、`npm run build`。
-- **2026-08-23の実行結果:** 作業ツリーで`npm ci`を完了し、format、lint、型チェック、単体、UI、ShellCheck、buildは成功した。E2EはFirefox以外の5プロジェクトで成功したが、Playwright Firefoxがテスト開始後に停止するため未完了とする。詳細と残るリスクは`docs/verification.md`を参照する。
+- **2026-08-23の実行結果:** `npm ci`後にformat、lint、型チェック、単体、UI、ShellCheck、build、E2Eを実行した。E2Eは59件成功、Windows版WebKitの既知制約によるオフライン1件スキップで完走した。詳細は`docs/verification.md`を参照する。
 
-### [ ] T-072 MVPリリース判定を行う
+### [x] T-072 MVPリリース判定を行う
 
 - **依存:** T-071
 - **作業:** 下記Definition of Done、ガードレール、未解決事項、残るリスクをレビューする。
 - **完了条件:** 安全性、決定性、オフライン動作を損なう未解決事項がなく、実行できなかった検証が省略されず報告されている。
 - **検証:** リリース判定記録に、承認・保留の理由と対象コミットを残す。
-- **2026-08-23の判定:** 対象コミット`e2ec41c`を基準とする作業ツリーは、Playwright Firefoxを含むT-071のE2Eを完了できないため保留とする。詳細と再開条件は`docs/verification.md`を参照する。
+- **2026-08-23の判定:** 対象コミット`628fe12`はリリース可とする。詳細と既知制約は`docs/verification.md`を参照する。
 
 ## Definition of Done
 
@@ -401,4 +401,4 @@ Ubuntu Server 24.04 LTS の初期設定手順を、安全かつ決定的に生�
 - [x] 日本語UI、モバイル操作、キーボード操作、ラベル、フォーカス、エラー要約が確認されている。
 - [x] 公式根拠のURL、対象バージョン、最終確認日を追跡できる。
 - [x] format、lint、型チェック、単体、UI、E2E、ShellCheck、Ubuntu 24.04相当環境、対象ブラウザ、ビルドの結果が記録されている。
-- [ ] 安全性、決定性、オフライン動作に関する未解決の重大リスクがない。
+- [x] 安全性、決定性、オフライン動作に関する未解決の重大リスクがない。

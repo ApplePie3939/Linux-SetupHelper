@@ -2,22 +2,22 @@
 
 ## リリース判定
 
-**保留**（2026-08-23、対象コミット`e2ec41c`を基準とする作業ツリー）。Ubuntu Server 24.04 VMでの安全性重要検証、現行ブラウザ、実Safari、Windows Narrator、iPhone VoiceOverの既存確認は有効である。Safari、Chrome、Edge、Firefoxの各1世代前は、利用者の承認によりリリース条件から除外した。ただし、Playwright Firefoxを含む最終E2Eを完走できなかったため、リリース判定は保留とする。
+**リリース可**（2026-08-23、対象コミット`628fe12`）。Ubuntu Server 24.04 VMでの安全性重要検証、現行ブラウザ、実Safari、Windows Narrator、iPhone VoiceOverの既存確認は有効である。Safari、Chrome、Edge、Firefoxの各1世代前は、利用者の承認によりリリース条件から除外した。最終品質ゲートは完走し、安全性、決定性、オフライン動作に関する未解決の重大リスクはない。
 
 ### 2026-08-23 最終品質ゲートの再実行
 
 Node.js 24.18.0、npm 11.16.0で実行した。`npm ci`は、Playwrightテストサーバーを停止して依存ファイルのロックを解消した後に成功した。ShellCheck 0.11.0も導入済みである。
 
-| 検証                     | 結果                                                                                                                                             |
-| ------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------ |
-| Format、Lint、TypeScript | 成功                                                                                                                                             |
-| 単体                     | 成功（15件）                                                                                                                                     |
-| UI                       | 成功（2件）                                                                                                                                      |
-| ShellCheck               | 成功（0.11.0、警告なし）                                                                                                                         |
-| Build                    | 成功                                                                                                                                             |
-| E2E                      | Chromium、Chrome、Edge、WebKit、Mobile Chromiumで成功。WebKitのオフライン1件は既知のスキップ。Playwright Firefoxはテスト開始後に進行せず未完了。 |
+| 検証                     | 結果                                                                                                                                                   |
+| ------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Format、Lint、TypeScript | 成功                                                                                                                                                   |
+| 単体                     | 成功（15件）                                                                                                                                           |
+| UI                       | 成功（2件）                                                                                                                                            |
+| ShellCheck               | 成功（0.11.0、警告なし）                                                                                                                               |
+| Build                    | 成功                                                                                                                                                   |
+| E2E                      | 59件成功。Windows版WebKitのオフライン再読込1件は既知の内部エラーのためスキップ。Chromium、Chrome、Edge、Firefox、WebKit、Mobile Chromiumの残りは成功。 |
 
-E2E再実行中に、ポート2222の安全経路テストが旧来の`sudo systemctl reload ssh`を期待していることを検出した。実装はUbuntu 24.04の`ssh.socket`対策として`sudo systemctl disable --now ssh.socket`と`sudo systemctl restart ssh`を正しく生成していたため、E2Eの期待値を安全性仕様に合わせて更新した。Firefoxを含む全E2Eを完走し、更新後の差分で品質ゲートを再実行することがリリース再開条件である。
+E2E再実行中に、ポート2222の安全経路テストが旧来の`sudo systemctl reload ssh`を期待していることを検出した。実装はUbuntu 24.04の`ssh.socket`対策として`sudo systemctl disable --now ssh.socket`と`sudo systemctl restart ssh`を正しく生成していたため、E2Eの期待値を安全性仕様に合わせて更新した。再起動後、昇格環境でPlaywright Firefoxの最小起動と全E2Eを再実行し、59件成功・1件スキップで完走した。
 
 ## 自動検証
 
