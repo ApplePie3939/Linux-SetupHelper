@@ -1,16 +1,17 @@
-const CACHE = "linux-setup-helper-v3";
-const APP_SHELL = ["/", "/index.html", "/manifest.webmanifest", "/icon.svg"];
+const CACHE = "linux-setup-helper-v4";
+const APP_SHELL = ["./", "index.html", "manifest.webmanifest", "icon.svg"];
+const appUrl = (path) => new URL(path, self.registration.scope).toString();
 
 self.addEventListener("install", (event) => {
   event.waitUntil(
     (async () => {
       const cache = await caches.open(CACHE);
-      const response = await fetch("/index.html", { cache: "no-cache" });
+      const response = await fetch(appUrl("index.html"), { cache: "no-cache" });
       const html = await response.text();
       const assetPaths = [...html.matchAll(/(?:src|href)="([^"]+)"/g)]
-        .map((match) => match[1])
-        .filter((path) => path?.startsWith("/assets/"));
-      await cache.addAll([...APP_SHELL, ...assetPaths]);
+        .map((match) => new URL(match[1], self.registration.scope).toString())
+        .filter((path) => new URL(path).pathname.includes("/assets/"));
+      await cache.addAll([...APP_SHELL.map(appUrl), ...assetPaths]);
     })(),
   );
   self.skipWaiting();
@@ -41,11 +42,11 @@ self.addEventListener("fetch", (event) => {
           const response = await fetch(event.request, { cache: "no-cache" });
           if (response.ok) {
             const cache = await caches.open(CACHE);
-            await cache.put("/index.html", response.clone());
+            await cache.put(appUrl("index.html"), response.clone());
           }
           return response;
         } catch {
-          const fallback = await caches.match("/index.html", {
+          const fallback = await caches.match(appUrl("index.html"), {
             ignoreVary: true,
           });
           return fallback ?? Response.error();
