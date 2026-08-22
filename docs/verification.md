@@ -2,7 +2,7 @@
 
 ## リリース判定
 
-**保留**（2026-08-14）。Ubuntu Server 24.04 VMでの安全性重要検証は完了し、検証中に見つかった`ssh.socket`との相互作用を修正した。実Safariと各対象ブラウザの1世代前、実スクリーンリーダーの検証が未完了のため、MVPはまだリリース可としない。
+**保留**（2026-08-23）。Ubuntu Server 24.04 VMでの安全性重要検証、実Safari（現行版）、Windows Narrator、iPhone VoiceOverの確認は完了した。Safari、Chrome、Edge、Firefoxの各1世代前の検証が未完了のため、MVPはまだリリース可としない。
 
 ## 自動検証
 
@@ -30,10 +30,11 @@ E2Eは生成停止、SSH安全順序、`sshd -T`による実効設定確認、�
 | Chromium         | Playwright 151.0.7922.34            | 全E2E成功                                               |
 | Firefox          | Playwright 153.0                    | 全E2E成功                                               |
 | WebKit           | Playwright 26.5                     | オフラインreloadはWindows版の内部エラー。他6件は成功    |
+| Safari           | iPhone 17の現行Safari               | HTTPSのGitHub Pages配信で手動確認。通常フロー、3種のダウンロード、オフライン再読込後の生成・ZIP出力、VoiceOver操作に成功 |
 | Mobile Chromium  | Playwright iPhone 13相当            | 全E2E成功                                               |
 | アプリ内ブラウザ | Chromium系、1280px・390pxで手動確認 | 横方向の本文はみ出しなし、エラー要約へフォーカス、警告0 |
 
-実SafariではなくWebKit互換エンジンによる結果である。Safariの現行版・1世代前、およびChrome、Edge、Firefoxの1世代前は未検証。WebKitのオフライン試験は実Safariで行うまで完了扱いにしない。
+Playwright WebKitは実Safariの代替ではない。Safari現行版のオフライン試験は実Safariで完了した。Safari、Chrome、Edge、Firefoxの各1世代前は未検証である。
 
 ## アクセシビリティ検証
 
@@ -50,6 +51,13 @@ E2Eは生成停止、SSH安全順序、`sshd -T`による実効設定確認、�
 - Windows Narrator（`C:\\Windows\\System32\\Narrator.exe`）を利用し、利用者が音声を聴取して確認した。TabとSpaceだけのウィザード操作、エラー要約、入力ラベル、コピー成功通知、Markdown・ZIP・設定JSONのダウンロード操作、および`details`内の「失敗時の復旧」と「公式根拠」の開閉はいずれも読み上げ・操作できた。
 - 同日に前提確認画面から再確認し、上記のNarrator操作に問題がないことを利用者が確認した。
 - この結果によりT-050を完了とする。NVDA、VoiceOver、実Safari、および各対象ブラウザの1世代前の確認は、リリース判定に残る別の互換性検証課題である。
+
+### 2026-08-23 iPhone VoiceOver・実Safari確認
+
+- iPhone 17の現行Safariで、HTTPS配信したproduction buildを手動確認した。
+- VoiceOverで入力ラベル、チェックボックスの状態、エラー要約、コピー操作、`details`、3種のダウンロード操作を確認した。
+- Service Worker登録後、機内モードで再読込し、手順書生成とZIP出力を確認した。
+- この結果により現行SafariとiPhone VoiceOverの確認を完了とする。Safari、Chrome、Edge、Firefoxの各1世代前は引き続きリリース判定の未完了項目である。
 
 ## Ubuntu Server 24.04隔離環境
 
