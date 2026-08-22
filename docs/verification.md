@@ -2,7 +2,7 @@
 
 ## リリース判定
 
-**保留**（2026-08-23）。Ubuntu Server 24.04 VMでの安全性重要検証、実Safari（現行版）、Windows Narrator、iPhone VoiceOverの確認は完了した。Safari、Chrome、Edge、Firefoxの各1世代前の検証が未完了のため、MVPはまだリリース可としない。
+**リリース可**（2026-08-23）。Ubuntu Server 24.04 VMでの安全性重要検証、現行ブラウザ、実Safari、Windows Narrator、iPhone VoiceOverの確認は完了した。Safari、Chrome、Edge、Firefoxの各1世代前は未検証だが、利用者の承認によりリリース条件から除外した。
 
 ## 自動検証
 
@@ -34,7 +34,7 @@ E2Eは生成停止、SSH安全順序、`sshd -T`による実効設定確認、�
 | Mobile Chromium  | Playwright iPhone 13相当            | 全E2E成功                                               |
 | アプリ内ブラウザ | Chromium系、1280px・390pxで手動確認 | 横方向の本文はみ出しなし、エラー要約へフォーカス、警告0 |
 
-Playwright WebKitは実Safariの代替ではない。Safari現行版のオフライン試験は実Safariで完了した。Safari、Chrome、Edge、Firefoxの各1世代前は未検証である。
+Playwright WebKitは実Safariの代替ではない。Safari現行版のオフライン試験は実Safariで完了した。Safari、Chrome、Edge、Firefoxの各1世代前は未検証だが、2026-08-23の利用者承認によりリリース条件から除外した。
 
 ## アクセシビリティ検証
 
@@ -57,7 +57,7 @@ Playwright WebKitは実Safariの代替ではない。Safari現行版のオフラ
 - iPhone 17の現行Safariで、HTTPS配信したproduction buildを手動確認した。
 - VoiceOverで入力ラベル、チェックボックスの状態、エラー要約、コピー操作、`details`、3種のダウンロード操作を確認した。
 - Service Worker登録後、機内モードで再読込し、手順書生成とZIP出力を確認した。
-- この結果により現行SafariとiPhone VoiceOverの確認を完了とする。Safari、Chrome、Edge、Firefoxの各1世代前は引き続きリリース判定の未完了項目である。
+- この結果により現行SafariとiPhone VoiceOverの確認を完了とする。Safari、Chrome、Edge、Firefoxの各1世代前は未検証だが、2026-08-23の利用者承認によりリリース判定の未完了項目ではない。
 
 ## Ubuntu Server 24.04隔離環境
 
