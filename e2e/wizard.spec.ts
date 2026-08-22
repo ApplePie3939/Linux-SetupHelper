@@ -109,7 +109,12 @@ test("安全な経路にSSHロックアウト防止手順が含まれる", async
     page.getByText("sudo sshd -t", { exact: true }).first(),
   ).toBeVisible();
   await expect(
-    page.getByText("sudo systemctl reload ssh", { exact: true }),
+    page.getByText("sudo systemctl disable --now ssh.socket", {
+      exact: true,
+    }),
+  ).toBeVisible();
+  await expect(
+    page.getByText("sudo systemctl restart ssh", { exact: true }),
   ).toBeVisible();
   await expect(page.getByText(/sudo sshd -T/).first()).toBeVisible();
   await expect(
