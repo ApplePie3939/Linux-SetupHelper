@@ -1,0 +1,20 @@
+# さくらのレンタルサーバで /linux-setup-helper/ に配置するための配信設定。
+# mod_headersが利用できない場合も、アプリ自体は動作する。
+<IfModule mod_headers.c>
+    Header always set Content-Security-Policy "default-src 'self'; base-uri 'none'; object-src 'none'; script-src 'self'; style-src 'self'; img-src 'self' data:; connect-src 'self'; worker-src 'self'; manifest-src 'self'; frame-ancestors 'none'; form-action 'self'"
+    Header always set X-Content-Type-Options "nosniff"
+    Header always set Referrer-Policy "strict-origin-when-cross-origin"
+    Header always set X-Frame-Options "DENY"
+    Header always set Permissions-Policy "camera=(), geolocation=(), microphone=(), payment=()"
+    Header always set Strict-Transport-Security "max-age=31536000"
+</IfModule>
+
+<Files "sw.js">
+    <IfModule mod_headers.c>
+        Header always set Cache-Control "no-cache, must-revalidate"
+    </IfModule>
+</Files>
+
+<Files "manifest.webmanifest">
+    ForceType application/manifest+json
+</Files>

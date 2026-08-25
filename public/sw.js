@@ -1,6 +1,17 @@
 const CACHE = "linux-setup-helper-v4";
 const APP_SHELL = ["./", "index.html", "manifest.webmanifest", "icon.svg"];
 const appUrl = (path) => new URL(path, self.registration.scope).toString();
+const isStaticAsset = (request) => {
+  const url = new URL(request.url);
+  return (
+    url.pathname.startsWith(
+      new URL("assets/", self.registration.scope).pathname,
+    ) ||
+    ["manifest.webmanifest", "icon.svg"].some((name) =>
+      url.pathname.endsWith(`/${name}`),
+    )
+  );
+};
 
 self.addEventListener("install", (event) => {
   event.waitUntil(
@@ -52,12 +63,16 @@ self.addEventListener("fetch", (event) => {
           return fallback ?? Response.error();
         }
       }
-      const cached = await caches.match(event.request, { ignoreVary: true });
-      if (cached) return cached;
+      if (isStaticAsset(event.request)) {
+        const cached = await caches.match(event.request, { ignoreVary: true });
+        if (cached) return cached;
+      }
       try {
         const response = await fetch(event.request);
-        const cache = await caches.open(CACHE);
-        await cache.put(event.request, response.clone());
+        if (isStaticAsset(event.request) && response.ok) {
+          const cache = await caches.open(CACHE);
+          await cache.put(event.request, response.clone());
+        }
         return response;
       } catch {
         return Response.error();

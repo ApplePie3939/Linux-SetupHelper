@@ -66,6 +66,14 @@ npm run preview
 
 `dist/`をHTTPSの静的ホスティングへ配置します。サブパス配信時はViteの`base`とmanifestのURLを配信先に合わせてください。
 
+### nginxでの公開時の防御ヘッダー
+
+さくらのレンタルサーバへは、生成した`dist/`の内容を配信先ディレクトリ（このアプリでは`linux-setup-helper/`）へそのまま上書きアップロードしてください。`dist/.htaccess`にCSP、HSTS、クリックジャッキング・MIMEスニッフィング対策、不要なブラウザー権限の拒否、Service Workerの更新確認、およびWeb App ManifestのContent-Typeを含めています。HTMLにもCSPを設定しており、ヘッダー設定が使えない環境での補完になります。
+
+nginxを直接管理する環境では、代わりに`deployment/nginx/linux-setup-helper-location.conf`をサーバー設定（`server`ブロック）に`include`してください。`linux-setup-helper-security.conf`は、この設定から参照する共通ヘッダーです。
+
+HSTSの`includeSubDomains`は、すべての現在・将来のサブドメインをHTTPSで提供できる場合にだけ、明示的に追加してください。共有ホスティングなどでnginx設定を変更できない場合は、ホスティング事業者のヘッダー設定機能で同等のヘッダーを設定します。
+
 ## 設定JSON互換性
 
 現在の`schemaVersion`は`1`です。未知のキー、型違反、範囲外値、未対応バージョンを読込時に拒否します。将来の破壊的変更ではバージョンを増やし、暗黙変換は行いません。
